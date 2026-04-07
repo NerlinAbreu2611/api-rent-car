@@ -15,6 +15,12 @@ enum estado {
   inactivo
 }
 
+enum rol{
+  admin
+  empleado
+  supervisor
+}
+
 model cliente{
   cliente_id Int @id @default(autoincrement())
   nombre String @db.VarChar(100)
@@ -24,4 +30,28 @@ model cliente{
   email String? @db.VarChar(50) @unique
   direccion String? @db.VarChar(50)
   estado estado @default(activo)
+}
+
+model usuario{
+  usuario_id Int @id @default(autoincrement())
+  nombre String @db.VarChar(100)
+  apellido String @db.VarChar(100)
+  
+  username String @db.VarChar(100) @unique
+  password String @db.VarChar(255)
+  rol rol
+  estado estado @default(activo)
+  bitacora_usuario bitacora_usuario[]
+}
+
+
+model bitacora_usuario{
+  bitacora_id Int @id @default(autoincrement())
+  accion String @db.VarChar(100)
+  descripcion String?  
+  createdAt DateTime @default(now())
+  ip_origen String? @db.VarChar(50)
+  estado estado @default(activo)
+  usuario_id Int
+  usuario usuario @relation(fields: [usuario_id], references: [usuario_id])
 }
