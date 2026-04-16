@@ -6,47 +6,7 @@ import prisma from "../lib/prisma.js";
 const clienteRouter = Router();
 
 clienteRouter.get("/", async (req, res) => {
-  const {
-    nombre = "",
-    apellido = "",
-    cedula = "",
-    telefono = "",
-    email = "",
-    direccion = "",
-    estado = "activo",
-  } = req.body;
-
-  const clientes = await prisma.cliente.findMany({
-    where: {
-      nombre: {
-        contains: nombre,
-        mode: "insensitive",
-      },
-      apellido: {
-        contains: apellido,
-        mode: "insensitive",
-      },
-      cedula: {
-        contains: cedula,
-        mode: "insensitive",
-      },
-      telefono: {
-        contains: telefono || undefined,
-        mode: "insensitive",
-      },
-      email: {
-        contains: email || undefined,
-        mode: "insensitive",
-      },
-      direccion: {
-        contains: direccion || undefined,
-        mode: "insensitive",
-      },
-      estado: {
-        equals: estado || "inactivo",
-      },
-    },
-  });
+  const clientes = await prisma.cliente.findMany();
 
   res.status(200).json(clientes);
 });
@@ -83,7 +43,7 @@ clienteRouter.post(
       .optional({ nullable: true })
       .isString()
       .withMessage("El teléfono debe ser un string")
-      .isLength({ min: 10, max: 11 })
+      .isLength({ min: 10, max: 10 })
       .withMessage("El teléfono debe tener entre 10 y 11 caracteres")
       .isNumeric()
       .withMessage("Solo debe contener números"),
@@ -121,10 +81,16 @@ clienteRouter.post(
 
       res.status(201).json(cliente);
     } catch (error) {
-      res.status(500).json({
-        error: "Error al crear el cliente",
-        errorMessage: error.message,
-      });
+      if (error.code === "P2002") {
+        // Código de Prisma para "Unique constraint failed"
+        const campo = error.meta.target[0]; // Prisma te dice exactamente qué campo falló
+        return res.status(400).json({
+          error: "Valor duplicado",
+          campo: campo,
+          mensaje: `El ${campo} ya está en uso.`,
+        });
+      }
+      res.status(500).json({ error: "Error interno" });
     }
   },
 );
@@ -158,7 +124,7 @@ clienteRouter.patch(
       .optional({ nullable: true })
       .isString()
       .withMessage("El teléfono debe ser un string")
-      .isLength({ min: 10, max: 11 })
+      .isLength({ min: 10, max: 10 })
       .withMessage("El teléfono debe tener entre 10 y 11 caracteres")
       .isNumeric()
       .withMessage("Solo debe contener números"),
@@ -174,10 +140,22 @@ clienteRouter.patch(
       .withMessage("La dirección debe ser un string")
       .isLength({ max: 40 })
       .withMessage("La dirección debe tener máximo 40 caracteres"),
+    body("estado")
+      .optional()
+      .isIn(["activo", "inactivo"])
+      .withMessage("Estado invalido"),
   ],
   async (req, res) => {
-    const { id, nombre, apellido, cedula, telefono, email, direccion } =
-      req.body;
+    const {
+      cliente_id,
+      nombre,
+      apellido,
+      cedula,
+      telefono,
+      email,
+      direccion,
+      estado,
+    } = req.body;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -185,7 +163,7 @@ clienteRouter.patch(
 
     try {
       const existingCliente = await prisma.cliente.findUnique({
-        where: { cliente_id: id },
+        where: { cliente_id: cliente_id },
       });
 
       if (!existingCliente) {
@@ -198,9 +176,10 @@ clienteRouter.patch(
       existingCliente.telefono = telefono || existingCliente.telefono;
       existingCliente.email = email || existingCliente.email;
       existingCliente.direccion = direccion || existingCliente.direccion;
+      existingCliente.estado = estado || existingCliente.estado;
 
       const cliente = await prisma.cliente.update({
-        where: { cliente_id: id },
+        where: { cliente_id: cliente_id },
         data: {
           nombre: existingCliente.nombre,
           apellido: existingCliente.apellido,
@@ -208,17 +187,51 @@ clienteRouter.patch(
           telefono: existingCliente.telefono,
           email: existingCliente.email,
           direccion: existingCliente.direccion,
+          estado: existingCliente.estado,
         },
       });
 
       res.status(200).json(cliente);
     } catch (error) {
-      res.status(500).json({
-        error: "Error al actualizar el cliente",
-        errorMessage: error.message,
-      });
+      if (error.code === "P2002") {
+        // Código de Prisma para "Unique constraint failed"
+        const campo = error.meta.target[0]; // Prisma te dice exactamente qué campo falló
+        return res.status(400).json({
+          error: "Valor duplicado",
+          campo: campo,
+          mensaje: `El valor:${campo} ya está en uso.`,
+        });
+      }
+      res.status(500).json({ error: "Error interno", mensaje: error.message });
     }
   },
 );
+
+clienteRouter.delete("/", async (req, res) => {
+  try {
+    const { cliente_id } = req.body;
+
+    const cliente = await prisma.cliente.update({
+      where: { cliente_id: cliente_id },
+      data: {
+        cliente_id: cliente_id,
+        estado: "inactivo",
+      },
+    });
+
+    res.status(200).json(cliente);
+  } catch (error) {
+    if (error.code === "P2002") {
+      // Código de Prisma para "Unique constraint failed"
+      const campo = error.meta.target[0]; // Prisma te dice exactamente qué campo falló
+      return res.status(400).json({
+        error: "Valor duplicado",
+        campo: campo,
+        mensaje: `El valor:${campo} ya está en uso.`,
+      });
+    }
+    res.status(500).json({ error: "Error interno", mensaje: error.message });
+  }
+});
 
 export default clienteRouter;

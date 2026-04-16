@@ -8,9 +8,9 @@ import prisma from "../lib/prisma.js";
 const usuarioRouter = Router();
 
 usuarioRouter.get("/", async (req, res) => {
-  const clientes = await prisma.cliente.findMany();
+  const usuarios = await prisma.usuario.findMany();
 
-  res.status(200).json(clientes);
+  res.status(200).json(usuarios);
 });
 
 usuarioRouter.post(
@@ -74,14 +74,8 @@ usuarioRouter.post(
 );
 
 usuarioRouter.patch(
-  "/",
+  "/:id",
   [
-    body("id")
-      .notEmpty()
-      .withMessage("El id es obligatorio")
-      .isInt()
-      .withMessage("El id debe ser un número"),
-
     body("nombre")
       .optional()
       .isString()
@@ -114,12 +108,12 @@ usuarioRouter.patch(
       .optional()
       .isIn(["admin", "empleado", "supervisor"])
       .withMessage("Rol inválido"),
+
     body("estado")
       .optional()
       .isIn(["activo", "inactivo"])
       .withMessage("Estado inválido"),
   ],
-
   async (req, res) => {
     const errores = validationResult(req);
 
@@ -127,19 +121,28 @@ usuarioRouter.patch(
       return res.status(400).json({ errores: errores.array() });
     }
 
-    try {
-      const data = matchedData(req);
+    const { id } = req.params;
 
-      // 🔥 sacamos el id del resto de datos
-      const { id, ...updateData } = data;
+    if (isNaN(id)) {
+      return res.status(400).json({ error: "ID inválido" });
+    }
+
+    try {
+      const updateData = matchedData(req);
 
       const usuario = await prisma.usuario.update({
-        where: { id: Number(id) },
+        where: { usuario_id: Number(id) },
         data: updateData,
       });
 
       res.json(usuario);
     } catch (error) {
+      if (error.code === "P2025") {
+        return res.status(404).json({
+          error: "Usuario no encontrado",
+        });
+      }
+
       res.status(500).json({
         error: "Error al actualizar el usuario",
         errorMessage: error.message,
@@ -147,5 +150,36 @@ usuarioRouter.patch(
     }
   },
 );
+
+usuarioRouter.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (isNaN(id)) {
+    return res.status(400).json({ error: "ID inválido" });
+  }
+
+  try {
+    const usuario = await prisma.usuario.update({
+      where: { usuario_id: Number(id) },
+      data: { estado: "inactivo" },
+    });
+
+    res.status(200).json({
+      message: "Usuario desactivado correctamente",
+      usuario,
+    });
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        error: "Usuario no encontrado",
+      });
+    }
+
+    res.status(500).json({
+      error: "Error al desactivar el usuario",
+      errorMessage: error.message,
+    });
+  }
+});
 
 export default usuarioRouter;
