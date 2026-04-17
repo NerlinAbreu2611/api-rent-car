@@ -58,9 +58,11 @@ usuarioRouter.post(
       return res.status(400).json({ errores: errores.array() });
     }
 
+    const { usuario_id, ...data } = req.body;
+
     try {
       const usuario = await prisma.usuario.create({
-        data: req.body,
+        data,
       });
 
       res.status(201).json(usuario);
