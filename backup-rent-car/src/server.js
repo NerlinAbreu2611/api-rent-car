@@ -5,11 +5,6 @@ import clienteRouter from "./routes/clienteRouter.js";
 import usuarioRouter from "./routes/usuarioRouter.js";
 import vehiculoRouter from "./routes/vehiculoRouter.js";
 import bitacoraRouter from "./routes/bitacoraRouter.js";
-import feriadoRouter from "./routes/feriadoRouter.js";
-import reservaRouter from "./routes/reservaRouter.js";
-import recepcionRouter from "./routes/recepcionRouter.js";
-import pagoRouter from "./routes/pagoRouter.js";
-import reporteRouter from "./routes/reporteRouter.js";
 
 const app = express();
 
@@ -25,11 +20,6 @@ app.use("/api/cliente", clienteRouter);
 app.use("/api/usuario", usuarioRouter);
 app.use("/api/vehiculo", vehiculoRouter);
 app.use("/api/bitacora", bitacoraRouter);
-app.use("/api/feriado", feriadoRouter);
-app.use("/api/reserva", reservaRouter);
-app.use("/api/recepcion", recepcionRouter);
-app.use("/api/pago", pagoRouter);
-app.use("/api/reportes", reporteRouter);
 app.listen(3001, () => {
   console.log("Server is running on port 3001");
 });

@@ -15,76 +15,181 @@ enum estado {
   inactivo
 }
 
-enum rol{
+enum rol {
   admin
   empleado
   supervisor
 }
 
-
-
-
-
-
-
-
-model cliente{
-  cliente_id Int @id @default(autoincrement())
-  nombre String @db.VarChar(100)
-  apellido String @db.VarChar(100)
-  cedula String @db.VarChar(11) @unique
-  telefono String? @db.VarChar(15) @unique
-  email String? @db.VarChar(50) @unique
-  direccion String? @db.VarChar(50)
-  estado estado @default(activo)
+model cliente {
+  cliente_id Int       @id @default(autoincrement())
+  nombre     String    @db.VarChar(100)
+  apellido   String    @db.VarChar(100)
+  cedula     String    @unique @db.VarChar(11)
+  telefono   String?   @unique @db.VarChar(15)
+  email      String?   @unique @db.VarChar(50)
+  direccion  String?   @db.VarChar(50)
+  estado     estado    @default(activo)
+  reserva    reserva[]
 }
 
-model usuario{
-  usuario_id Int @id @default(autoincrement())
-  nombre String @db.VarChar(100)
-  apellido String @db.VarChar(100)
-  
-  username String @db.VarChar(100) @unique
-  password String @db.VarChar(255)
-  rol rol
-  estado estado @default(activo)
+model usuario {
+  usuario_id Int    @id @default(autoincrement())
+  nombre     String @db.VarChar(100)
+  apellido   String @db.VarChar(100)
+
+  username         String             @unique @db.VarChar(100)
+  password         String             @db.VarChar(255)
+  rol              rol
+  estado           estado             @default(activo)
   bitacora_usuario bitacora_usuario[]
 }
 
-
-model bitacora_usuario{
-  bitacora_id Int @id @default(autoincrement())
-  accion String @db.VarChar(100)
-  descripcion String?  
-  createdAt DateTime @default(now())
-  ip_origen String? @db.VarChar(50)
-  estado estado @default(activo)
-  usuario_id Int
-  usuario usuario @relation(fields: [usuario_id], references: [usuario_id])
+model bitacora_usuario {
+  bitacora_id Int      @id @default(autoincrement())
+  accion      String   @db.VarChar(100)
+  descripcion String?
+  createdAt   DateTime @default(now())
+  ip_origen   String?  @db.VarChar(50)
+  estado      estado   @default(activo)
+  usuario_id  Int
+  usuario     usuario  @relation(fields: [usuario_id], references: [usuario_id])
 }
 
-model vehiculo{
-  vehiculo_id Int @id @default(autoincrement())
-  marca String @db.VarChar(50)
-  modelo String @db.VarChar(50)
-  anio Int 
-  placa String @db.VarChar(20) @unique
-  disponible Boolean @default(true)
-  estado estado @default(activo)
-  precios precio_vehiculo[]
+model vehiculo {
+  vehiculo_id       Int                 @id @default(autoincrement())
+  marca             String              @db.VarChar(50)
+  modelo            String              @db.VarChar(50)
+  anio              Int
+  placa             String              @unique @db.VarChar(20)
+  disponible        Boolean             @default(true)
+  estado            estado              @default(activo)
+  precios           precio_vehiculo[]
+  reserva_vehiculo  reserva_vehiculo[]
+  pago_detalle      pago_detalle[]
+  recepcion_detalle recepcion_detalle[]
+  penalidad         penalidad[]
 }
 
-model precio_vehiculo{
-  id Int @id @default(autoincrement())
+model precio_vehiculo {
+  id          Int      @id @default(autoincrement())
   vehiculo_id Int
-  tipo_dia tipo_dia
-  precio Decimal @db.Decimal(10,2)
-  estado estado @default(activo)
-  vehiculo vehiculo @relation(fields: [vehiculo_id],references: [vehiculo_id])
-  @@unique([vehiculo_id,tipo_dia])
+  tipo_dia    tipo_dia
+  precio      Decimal  @db.Decimal(10, 2)
+  estado      estado   @default(activo)
+  vehiculo    vehiculo @relation(fields: [vehiculo_id], references: [vehiculo_id])
+
+  @@unique([vehiculo_id, tipo_dia])
 }
+
 enum tipo_dia {
   normal
   fin_de_semana
   feriado
+}
+
+model feriado {
+  feriado_id  Int      @id @default(autoincrement())
+  fecha       DateTime @unique @db.Date
+  descripcion String?  @db.VarChar(100)
+  estado      estado   @default(activo)
+}
+
+enum estado_reserva {
+  pendiente
+  activa
+  completada
+  cancelada
+}
+
+model reserva {
+  reserva_id    Int            @id @default(autoincrement())
+  cliente_id    Int
+  fecha_reserva DateTime       @db.Date
+  fecha_inicio  DateTime       @db.Date
+  fecha_fin     DateTime       @db.Date
+  estado        estado_reserva @default(pendiente)
+
+  cliente     cliente            @relation(fields: [cliente_id], references: [cliente_id])
+  vehiculos   reserva_vehiculo[]
+  pagos       pago[]
+  recepciones recepcion[]
+  penalidades penalidad[]
+}
+
+model reserva_vehiculo {
+  detalle_id      Int     @id @default(autoincrement())
+  reserva_id      Int
+  vehiculo_id     Int
+  precio_unitario Decimal @db.Decimal(10, 2)
+  dias            Int
+  subtotal        Decimal @db.Decimal(10, 2)
+  estado          estado  @default(activo)
+
+  reserva  reserva  @relation(fields: [reserva_id], references: [reserva_id])
+  vehiculo vehiculo @relation(fields: [vehiculo_id], references: [vehiculo_id])
+}
+
+model pago {
+  pago_id    Int      @id @default(autoincrement())
+  reserva_id Int
+  fecha_pago DateTime @db.Date
+  metodo     String?  @db.VarChar(50)
+  total      Decimal  @db.Decimal(10, 2)
+  estado     estado   @default(activo)
+
+  reserva  reserva        @relation(fields: [reserva_id], references: [reserva_id])
+  detalles pago_detalle[]
+}
+
+model pago_detalle {
+  detalle_pago_id Int     @id @default(autoincrement())
+  pago_id         Int
+  vehiculo_id     Int
+  monto           Decimal @db.Decimal(10, 2)
+  estado          estado  @default(activo)
+
+  pago     pago     @relation(fields: [pago_id], references: [pago_id])
+  vehiculo vehiculo @relation(fields: [vehiculo_id], references: [vehiculo_id])
+}
+
+model recepcion {
+  recepcion_id    Int      @id @default(autoincrement())
+  reserva_id      Int
+  fecha_recepcion DateTime @db.Date
+  empleado_id     Int
+  observaciones   String?  @db.VarChar(100)
+  estado          estado   @default(activo)
+
+  reserva  reserva             @relation(fields: [reserva_id], references: [reserva_id])
+  detalles recepcion_detalle[]
+}
+
+model recepcion_detalle {
+  detalle_recepcion_id Int      @id @default(autoincrement())
+  recepcion_id         Int
+  vehiculo_id          Int
+  combustible_devuelto Decimal  @db.Decimal(5, 2)
+  kilometraje_devuelto Int
+  danos                String?  @db.VarChar(100)
+  cargo_extra          Decimal? @db.Decimal(10, 2)
+  estado               estado   @default(activo)
+
+  recepcion recepcion @relation(fields: [recepcion_id], references: [recepcion_id])
+  vehiculo  vehiculo  @relation(fields: [vehiculo_id], references: [vehiculo_id])
+}
+
+model penalidad {
+  penalidad_id   Int      @id @default(autoincrement())
+  reserva_id     Int
+  vehiculo_id    Int
+  tipo           String   @db.VarChar(50)
+  descripcion    String?  @db.VarChar(200)
+  dias_retraso   Int      @default(0)
+  monto          Decimal  @db.Decimal(10, 2)
+  fecha_registro DateTime @default(now())
+  estado         estado   @default(activo)
+
+  reserva  reserva  @relation(fields: [reserva_id], references: [reserva_id])
+  vehiculo vehiculo @relation(fields: [vehiculo_id], references: [vehiculo_id])
 }

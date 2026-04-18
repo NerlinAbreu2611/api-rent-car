@@ -1,0 +1,90 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum estado {
+  activo
+  inactivo
+}
+
+enum rol{
+  admin
+  empleado
+  supervisor
+}
+
+
+
+
+
+
+
+
+model cliente{
+  cliente_id Int @id @default(autoincrement())
+  nombre String @db.VarChar(100)
+  apellido String @db.VarChar(100)
+  cedula String @db.VarChar(11) @unique
+  telefono String? @db.VarChar(15) @unique
+  email String? @db.VarChar(50) @unique
+  direccion String? @db.VarChar(50)
+  estado estado @default(activo)
+}
+
+model usuario{
+  usuario_id Int @id @default(autoincrement())
+  nombre String @db.VarChar(100)
+  apellido String @db.VarChar(100)
+  
+  username String @db.VarChar(100) @unique
+  password String @db.VarChar(255)
+  rol rol
+  estado estado @default(activo)
+  bitacora_usuario bitacora_usuario[]
+}
+
+
+model bitacora_usuario{
+  bitacora_id Int @id @default(autoincrement())
+  accion String @db.VarChar(100)
+  descripcion String?  
+  createdAt DateTime @default(now())
+  ip_origen String? @db.VarChar(50)
+  estado estado @default(activo)
+  usuario_id Int
+  usuario usuario @relation(fields: [usuario_id], references: [usuario_id])
+}
+
+model vehiculo{
+  vehiculo_id Int @id @default(autoincrement())
+  marca String @db.VarChar(50)
+  modelo String @db.VarChar(50)
+  anio Int 
+  placa String @db.VarChar(20) @unique
+  disponible Boolean @default(true)
+  estado estado @default(activo)
+  precios precio_vehiculo[]
+}
+
+model precio_vehiculo{
+  id Int @id @default(autoincrement())
+  vehiculo_id Int
+  tipo_dia tipo_dia
+  precio Decimal @db.Decimal(10,2)
+  estado estado @default(activo)
+  vehiculo vehiculo @relation(fields: [vehiculo_id],references: [vehiculo_id])
+  @@unique([vehiculo_id,tipo_dia])
+}
+enum tipo_dia {
+  normal
+  fin_de_semana
+  feriado
+}

@@ -1,0 +1,241 @@
+1. ESTRUCTURA DEL MENÚ DEL SISTEMA
+Mantenimientos
+Registro de clientes
+Registro de vehículos
+Registro de Gamas
+
+Procesos o Movimientos
+Registro de alquiler de vehículo
+Registro de devolución de vehículo
+Registro de pagos
+Consultas
+Consulta de vehículos disponibles
+Consulta de alquileres activos
+Consulta de historial de alquileres por cliente
+Consulta de estado de cuenta por alquiler
+Consulta vehículos alquilados días feriados o no
+Reportes
+Reporte de ingresos por fecha
+Reporte de vehículos más rentados
+Reporte de clientes frecuentes
+Reporte de penalidades generadas
+Reporte de vehículos alquilados días feriados o no
+2. MODELO DE BASE DE DATOS 
+Esta base de datos es solo un ejemplo, deben desarrollar su propia base de datos según la lógica implementada.
+         CLIENTES
+
+CREATE TABLE Clientes (
+    Cliente_id INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    cedula VARCHAR(20) UNIQUE NOT NULL,
+    teléfono VARCHAR(20),
+    email VARCHAR(50),
+    direccion VARCHAR(40),
+    estado VARCHAR(10) DEFAULT 'Activo'
+);
+
+ VEHÍCULOS
+CREATE TABLE Vehiculos (
+    Vehiculo_id INT PRIMARY KEY AUTO_INCREMENT,
+    marca VARCHAR(50),
+    modelo VARCHAR(50),
+    año INT,
+    placa VARCHAR(20) UNIQUE NOT NULL,
+    tipo VARCHAR(50),
+    disponible BOOLEAN DEFAULT TRUE,
+    estado VARCHAR(20) DEFAULT 'Activo'
+);
+
+CREATE TABLE Tipo_Dia (
+    tipo_dia_id INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(50) UNIQUE NOT NULL -- Normal, FinSemana, Feriado
+);
+
+CREATE TABLE Precios_Vehiculo (
+    precio_id INT PRIMARY KEY AUTO_INCREMENT,
+    vehiculo_id INT,
+    tipo_dia_id INT,
+    precio DECIMAL(10,2) NOT NULL,
+    estado VARCHAR(20) DEFAULT 'Activo',
+    FOREIGN KEY (vehiculo_id) REFERENCES Vehículos(vehiculo_id),
+    FOREIGN KEY (tipo_dia_id) REFERENCES Tipo_Dia(tipo_dia_id)
+);
+
+CREATE TABLE Feriados (
+    feriado_id INT PRIMARY KEY AUTO_INCREMENT,
+    fecha DATE UNIQUE NOT NULL,
+    descripción VARCHAR(100),
+    estado VARCHAR(20) DEFAULT 'Activo'
+);
+
+-- =========================
+-- RESERVAS (CABECERA + DETALLE)
+-- =========================
+CREATE TABLE Reservas (
+    reserva_id INT PRIMARY KEY AUTO_INCREMENT,
+    cliente_id INT,
+    fecha_reserva DATE NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    estado VARCHAR(20) DEFAULT 'Pendiente',
+    FOREIGN KEY (cliente_id) REFERENCES Clientes(cliente_id)
+);
+
+CREATE TABLE Reserva Vehículos (
+    detalle_id INT PRIMARY KEY AUTO_INCREMENT,
+    reserva_id INT,
+    vehiculo_id INT,
+    precio_unitario DECIMAL(10,2),
+    días INT,
+    subtotal DECIMAL(10,2),
+    estado VARCHAR(20) DEFAULT 'Activo',
+    FOREIGN KEY (reserva_id) REFERENCES Reservas(reserva_id),
+    FOREIGN KEY (vehiculo_id) REFERENCES Vehículos(vehiculo_id)
+);
+
+-- =========================
+-- PAGOS (CABECERA + DETALLE)
+-- =========================
+CREATE TABLE Pagos (
+    pago_id INT PRIMARY KEY AUTO_INCREMENT,
+    reserva_id INT,
+    fecha_pago DATE NOT NULL,
+    metodo VARCHAR(50),
+    total DECIMAL(10,2),
+    estado VARCHAR(20) DEFAULT 'Procesado',
+    FOREIGN KEY (reserva_id) REFERENCES Reservas(reserva_id)
+);
+
+CREATE TABLE Pago_Detalle (
+    detalle_pago_id INT PRIMARY KEY AUTO_INCREMENT,
+    pago_id INT,
+    vehiculo_id INT,
+    monto DECIMAL(10,2),
+    estado VARCHAR(20) DEFAULT 'Activo',
+    FOREIGN KEY (pago_id) REFERENCES Pagos(pago_id),
+    FOREIGN KEY (vehiculo_id) REFERENCES Vehiculos(vehiculo_id)
+);
+
+-- =========================
+-- RECEPCIONES / DEVOLUCIONES (CABECERA + DETALLE)
+-- =========================
+CREATE TABLE Recepciones (
+    recepcion_id INT PRIMARY KEY AUTO_INCREMENT,
+    reserva_id INT,
+    fecha_recepcion DATE NOT NULL,
+    empleado_id INT,
+    observaciones VARCHAR(100),
+    estado VARCHAR(20) DEFAULT 'Pendiente',
+    FOREIGN KEY (reserva_id) REFERENCES Reservas(reserva_id)
+);
+
+CREATE TABLE Recepcion_Detalle (
+    detalle_recepcion_id INT PRIMARY KEY AUTO_INCREMENT,
+    recepcion_id INT,
+    vehiculo_id INT,
+    combustible_devuelto DECIMAL(5,2),
+    kilometraje_devuelto INT,
+    daños VARCHAR(100),
+    cargo_extra DECIMAL(10,2),
+    estado VARCHAR(20) DEFAULT 'Activo',
+    FOREIGN KEY (recepcion_id) REFERENCES Recepciones(recepcion_id),
+    FOREIGN KEY (vehiculo_id) REFERENCES Vehiculos(vehiculo_id)
+);
+
+-- =========================
+-- PENALIDADES
+-- =========================
+CREATE TABLE Penalidades (
+    penalidad_id INT PRIMARY KEY AUTO_INCREMENT,
+    reserva_id INT NOT NULL,
+    vehiculo_id INT,
+    tipo VARCHAR(50) NOT NULL, -- Retraso, Daño, Combustible, Otro
+    descripcion VARCHAR(200),
+    dias_retraso INT DEFAULT 0,
+    monto DECIMAL(10,2) NOT NULL,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    estado VARCHAR(20) DEFAULT 'Pendiente',
+    FOREIGN KEY (reserva_id) REFERENCES Reservas(reserva_id),
+    FOREIGN KEY (vehiculo_id) REFERENCES Vehiculos(vehiculo_id)
+);
+
+-- =========================
+-- USUARIOS DEL SISTEMA
+-- =========================
+CREATE TABLE Usuarios (
+    usuario_id INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    rol VARCHAR(50) NOT NULL, -- Admin, Empleado, Supervisor
+    estado VARCHAR(20) DEFAULT 'Activo'
+);
+
+
+CREATE TABLE Bitacora_Usuarios (
+    bitacora_id INT PRIMARY KEY AUTO_INCREMENT,
+    usuario_id INT NOT NULL,
+    accion VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ip_origen VARCHAR(50),
+    estado VARCHAR(20) DEFAULT 'Activo',
+    FOREIGN KEY (usuario_id) REFERENCES Usuarios(usuario_id)
+);
+3. REGLAS DE NEGOCIO
+
+NOTA VITAL:  CABE SEÑALAR EN LOS PROCESOS  Y/O MOVIMIENTOS UNA PERSONA PUEDE TENER MAS DE UN ALQUILER O SEA PUEDE TENER MAS DE UN VEHICULO A SU NOMBRE, IGUAL PARA EL PAGO PUEDE TENER VARIOS PAGO EN UN SOLO RECIBO DE PAGO.
+RECORDAR QUE ESTOS NO SON MANTENIMIENTO, SINO MOVIMIENTO QUE DEBEN TENER UN TABLE(WEB ) Y/O DATAGRIDVIEW(C#).
+
+NOTA-2: Los precios de los fines de semana tendrá otro precio como se muestra en la tabla, deben validar si el  alquiler a que rango de días pertenece y elegir el precio correspondiente.
+3.1 Disponibilidad de vehículos
+La disponibilidad no se almacena, se calcula dinámicamente.
+Un vehículo está disponible cuando no tiene alquiler activo sin devolución registrada.
+3.2 Registro de reservas
+Condiciones obligatorias:
+El cliente debe existir
+El vehículo debe existir
+El vehículo no debe tener un alquiler activo
+La fecha fin debe ser mayor que la fecha inicio
+Cálculo del total:
+Total = DATEDIFF(DAY, FechaInicio, FechaFin) * PrecioPorDia
+
+3.3 Registro de Recepción o Devolución 
+Condiciones:
+El alquiler debe existir
+No debe tener devolución previa
+Cálculo de penalidad:
+DiasRetraso = DATEDIFF(DAY, FechaFin, FechaDevolucion)
+
+Monto = DiasRetraso * PrecioPorDia * 1.5
+Solo aplica si:
+FechaDevolucion > FechaFin
+
+3.4 Pagos
+Condiciones:
+Monto debe ser mayor que cero
+No se permite pagar más del total adeudado
+Regla de saldo:
+Saldo = Total + Penalidades - SUM(Pagos)
+
+4. VALIDACIONES OBLIGATORIAS
+4.1 Validaciones en base de datos
+Fechas válidas.
+Evitar el doble alquiler activo.
+Esta restricción garantiza que un vehículo no pueda tener más de un alquiler activado simultáneamente.
+4.2 Validaciones a nivel de aplicación
+Validar que la cédula no esté duplicada
+Validar formato de correo electrónico
+Validar existencia de cliente
+Validar existencia de vehículo
+Validar disponibilidad del vehículo antes de alquilar
+Validar que el monto de pago sea positivo
+Validar que no se registre devolución duplicada
+Validar que las fechas no estén vacías
+Se debe registrar que usuario creó, modificó o canceló cualquier transacción.
+No se pueden eliminar registros de la base de datos, solo cancelarlos
+Los registros cancelados deben ser identificables, queda a su decisión como hacerlo posible.
+Todas las consultas y reportes deben tener una serie de filtros que permitan segmentar la información.
+Los reportes deben poder exportarse en PDF como mínimo.
